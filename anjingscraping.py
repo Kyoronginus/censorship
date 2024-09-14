@@ -34,7 +34,7 @@ def collect_sentences_with_anjing(url):
         return []
 
 # Fungsi untuk menyimpan dataset ke file CSV
-def save_to_csv(sentences, filename='dataset_anjing.csv'):
+def save_to_csv(sentences, filename='dataset_anjing_tambahan.csv'):
     df = pd.DataFrame(sentences, columns=['text'])
     df.to_csv(filename, index=False)
     print(f"Dataset saved to {filename}")
