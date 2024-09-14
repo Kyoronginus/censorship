@@ -4,8 +4,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import LabelEncoder
 import tensorflow as tf
-from tensorflow import Sequential
-from tensorflow import Dense
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+
 
 # Load the dataset
 try:
