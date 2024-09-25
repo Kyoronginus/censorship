@@ -47,7 +47,6 @@ model.add(Dense(1, activation='sigmoid'))  # Binary classification (offensive or
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', 'Precision', 'Recall'])
 
 # Train the model
-# Use sparse matrix input for memory efficiency
 model.fit(X_train_vec.toarray(), y_train, epochs=10, batch_size=10, validation_data=(X_test_vec.toarray(), y_test))
 
 # Evaluate the model
@@ -61,10 +60,6 @@ def predict_sentence(sentence):
     sentence_vec = vectorizer.transform([sentence]).toarray()  # Vectorize the sentence
     prediction = model.predict(sentence_vec)
     return 'Offensive' if prediction > 0.5 else 'Non-offensive'
-
-# Test with new sentences
-print(predict_sentence("Anjing itu lucu sekali"))  # Non-offensive
-print(predict_sentence("Dasar kamu anjing"))       # Offensive
 
 # Interactive input for continuous prediction
 while True:
