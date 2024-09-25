@@ -11,10 +11,11 @@ from tensorflow.keras.layers import Dense
 try:
     data1 = pd.read_csv('goblok.csv', sep=';', on_bad_lines='skip')
     data2 = pd.read_csv('kontol.csv', sep=';', on_bad_lines='skip')
-    data3 = pd.read_csv('dataset.csv', sep=';', on_bad_lines='skip') #kayaknya bikin training jadi kacau
-    data4 = pd.read_csv('twtHorni.csv', sep=';', on_bad_lines='skip') #kayaknya bikin training jadi kacau
+    data3 = pd.read_csv('anjing.csv', sep=';', on_bad_lines='skip') 
+    data4 = pd.read_csv('monyet.csv', sep=';', on_bad_lines='skip') 
+    data5 = pd.read_csv('twtHorni.csv', sep=';', on_bad_lines='skip') #kayaknya bikin training jadi kacau?
 
-    data = pd.concat([data1, data2, data3, data4], ignore_index=True)
+    data = pd.concat([data1, data2, data3, data4, data5], ignore_index=True)
 except FileNotFoundError:
     raise Exception("The dataset file 'dataset_anjing.csv' was not found.")
 

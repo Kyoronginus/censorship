@@ -34,21 +34,26 @@ def collect_sentences_with_keyword(url, keyword):
         return []
 
 # Fungsi untuk menyimpan dataset ke file CSV dan menambahkan label
-def save_to_csv(sentences_with_labels, filename='dataset_scraping.csv'):
+def save_to_csv(sentences_with_labels, keyword):
+    # Buat nama file berdasarkan keyword
+    filename = f"{keyword}.csv"
+
     # Buat DataFrame dengan kolom 'text' dan 'label'
     new_data = pd.DataFrame(sentences_with_labels, columns=['text', 'label'])
 
     try:
         # Cek apakah file CSV sudah ada, jika ya, tambahkan datanya
-        existing_data = pd.read_csv(filename)
+        existing_data = pd.read_csv(filename, sep=';')  # Memastikan CSV lama diparsing dengan delimiter ;
         updated_data = pd.concat([existing_data, new_data], ignore_index=True)
     except FileNotFoundError:
         # Jika file tidak ada, buat file baru
         updated_data = new_data
     
-    # Simpan dataset ke CSV
-    updated_data.to_csv(filename, index=False)
+    # Simpan dataset ke CSV dengan delimiter ;
+    updated_data.to_csv(filename, index=False, sep=';')  # Gunakan delimiter ;
     print(f"Dataset updated and saved to {filename}")
+
+
 
 # Fungsi untuk menanyakan label ke user
 def ask_for_labels(sentences):
@@ -86,7 +91,7 @@ def main():
     # Jika kalimat ditemukan, mulai proses labeling
     if all_sentences:
         sentences_with_labels = ask_for_labels(all_sentences)
-        save_to_csv(sentences_with_labels)
+        save_to_csv(sentences_with_labels,keyword)
     else:
         print(f"Tidak ditemukan kalimat yang mengandung kata kunci '{keyword}'.")
 
