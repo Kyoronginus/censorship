@@ -110,9 +110,89 @@ def predict_sentence(sentence):
 
     return ', '.join(label_texts)
 
-# Interactive input for continuous prediction
+def mask_kasar_cabul_words(sentence):
+    # Tokenize the input sentence and preprocess
+    original_sentence = sentence
+    sentence = re.sub(r'[^\w\s]', '', sentence.lower())  # Remove punctuation and lowercase the sentence
+    words = sentence.split()  # Split sentence into words
+    
+    # Tokenize the original sentence
+    inputs = tokenizer(original_sentence, return_tensors='pt', truncation=True, padding=True, max_length=128)
+    outputs = model(**inputs)
+    
+    # Get prediction probabilities
+    predictions = torch.sigmoid(outputs.logits).detach().numpy()
+    
+    # Use thresholds for 'kasar' and 'cabul'
+    threshold = 0.3
+    kasar_prob = predictions[0][mlb.classes_.tolist().index(1)]  # Index 1 corresponds to 'kasar'
+    cabul_prob = predictions[0][mlb.classes_.tolist().index(2)]  # Index 2 corresponds to 'cabul'
+    
+    # If the sentence is predicted to have 'kasar' or 'cabul' content, process the words
+    if kasar_prob > threshold or cabul_prob > threshold:
+        # For each word in the original sentence, check if the model classifies it as 'kasar' or 'cabul'
+        for word in words:
+            # Tokenize and predict each word individually
+            sub_inputs = tokenizer(word, return_tensors='pt', truncation=True, padding=True, max_length=128)
+            sub_outputs = model(**sub_inputs)
+            sub_predictions = torch.sigmoid(sub_outputs.logits).detach().numpy()
+            
+            # Get the probability of 'kasar' and 'cabul' labels for each word
+            sub_kasar_prob = sub_predictions[0][mlb.classes_.tolist().index(1)]  # Get 'kasar' probability
+            sub_cabul_prob = sub_predictions[0][mlb.classes_.tolist().index(2)]  # Get 'cabul' probability
+            
+            # Replace words classified as 'kasar' or 'cabul'
+            if sub_kasar_prob > threshold:
+                original_sentence = original_sentence.replace(word, '*****')
+            elif sub_cabul_prob > threshold:
+                original_sentence = original_sentence.replace(word, '#####')
+    
+    return original_sentence
+
+# Function for predicting a sentence and censoring the kasar and cabul parts
+def predict_and_censor(sentence):
+    try:
+        censored_sentence = mask_kasar_cabul_words(sentence)
+        return censored_sentence
+    except Exception as e:
+        print(f"Error during prediction and censoring: {e}")
+        return "An error occurred. Please try again."
+
+# Interactive input for continuous prediction with censoring
 while True:
-    sentence = input("Masukkan kalimat (ketik 'exit' untuk keluar): ")
-    if sentence.lower() == 'exit':
-        break
-    print(predict_sentence(sentence))
+    try:
+        sentence = input("Masukkan kalimat (ketik 'exit' untuk keluar): ")
+        if sentence.lower() == 'exit':
+            break
+        print(predict_and_censor(sentence))
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+
+# Function for predicting a sentence and censoring the kasar parts
+def predict_and_censor(sentence):
+    try:
+        censored_sentence = mask_kasar_words(sentence)
+        return censored_sentence
+    except Exception as e:
+        print(f"Error during prediction and censoring: {e}")
+        return "An error occurred. Please try again."
+
+# Interactive input for continuous prediction with censoring
+while True:
+    try:
+        sentence = input("Masukkan kalimat (ketik 'exit' untuk keluar): ")
+        if sentence.lower() == 'exit':
+            break
+        print(predict_and_censor(sentence))
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+
+
+# # Interactive input for continuous prediction
+# while True:
+#     sentence = input("Masukkan kalimat (ketik 'exit' untuk keluar): ")
+#     if sentence.lower() == 'exit':
+#         break
+#     print(predict_sentence(sentence))

@@ -14,9 +14,11 @@ try:
     data2 = pd.read_csv('kontol.csv', sep=';', on_bad_lines='skip')
     data3 = pd.read_csv('anjing.csv', sep=';', on_bad_lines='skip') 
     data4 = pd.read_csv('monyet.csv', sep=';', on_bad_lines='skip') 
+    data5 = pd.read_csv('babi.csv', sep=';', on_bad_lines='skip') 
+    
     data6 = pd.read_csv('dataset_50_cabul_revisi.csv', sep=';', on_bad_lines='skip')
 
-    data = pd.concat([data1, data2, data3, data4, data6], ignore_index=True)
+    data = pd.concat([data1, data2, data3, data4, data5, data6], ignore_index=True)
 except FileNotFoundError:
     raise Exception("The dataset file was not found.")
 
@@ -56,6 +58,7 @@ tokenizer = BertTokenizer.from_pretrained('indobenchmark/indobert-base-p2')
 train_encodings = tokenizer(list(X_train), truncation=True, padding=True, max_length=128)
 test_encodings = tokenizer(list(X_test), truncation=True, padding=True, max_length=128)
 
+
 # Convert to PyTorch Dataset
 class CustomDataset(torch.utils.data.Dataset):
     def __init__(self, encodings, labels):
@@ -67,9 +70,9 @@ class CustomDataset(torch.utils.data.Dataset):
         item['labels'] = torch.tensor(self.labels[idx], dtype=torch.float)  # Ensure float for multi-label
         return item
 
-
     def __len__(self):
         return len(self.labels)
+
 
 train_dataset = CustomDataset(train_encodings, y_train)
 test_dataset = CustomDataset(test_encodings, y_test)
@@ -88,7 +91,8 @@ training_args = TrainingArguments(
     weight_decay=0.01,
     logging_dir='./logs',
     # Add this line to specify the appropriate loss function for multi-label classification
-    evaluation_strategy="epoch"  # Optional: evaluate every epoch
+    evaluation_strategy="epoch",  # Optional: evaluate every epoch
+    no_cuda=False
 )
 
 # Initialize Trainer
@@ -113,8 +117,10 @@ print("Shape of y after MultiLabelBinarizer:", y.shape)
 print(f'X_train size: {len(X_train)}, y_train size: {len(y_train)}')
 print(f'X_test size: {len(X_test)}, y_test size: {len(y_test)}')
 
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+print(f"Using device: {device}")
 
-
+model = model.to(device)
 # Train the model
 trainer.train()
 
@@ -162,10 +168,12 @@ def training_step(self, model, inputs):
 
 
 # Predict function for a new sentence
+# Predict function for a new sentence
 def predict_sentence(sentence):
     inputs = tokenizer(sentence, return_tensors='pt', truncation=True, padding=True, max_length=128)
+    inputs = {key: val.to(device) for key, val in inputs.items()}
     outputs = model(**inputs)
-    predictions = torch.sigmoid(outputs.logits).detach().numpy()
+    predictions = torch.sigmoid(outputs.logits).detach().cpu().numpy()
     
     # Tampilkan semua label dengan probabilitas tanpa menggunakan threshold
     label_texts = []
@@ -179,6 +187,7 @@ def predict_sentence(sentence):
             label_texts.append(f'Cabul: {percentage:.2f}%')
 
     return ', '.join(label_texts)
+
 
 # Interactive input for continuous prediction
 while True:
