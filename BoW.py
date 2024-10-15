@@ -7,18 +7,22 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import MultiLabelBinarizer
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
+import glob
 from tensorflow.keras.layers import Dense
 
 # Load the dataset
 try:
     data1 = pd.read_csv('goblok.csv', sep=';', on_bad_lines='skip')
     data2 = pd.read_csv('kontol.csv', sep=';', on_bad_lines='skip')
-    data3 = pd.read_csv('anjing.csv', sep=';', on_bad_lines='skip') 
-    data4 = pd.read_csv('monyet.csv', sep=';', on_bad_lines='skip') 
-    data5 = pd.read_csv('babi.csv', sep=';', on_bad_lines='skip') #kayaknya bikin training jadi kacau?
+    data3 = pd.read_csv('anjing.csv', sep=';', on_bad_lines='skip')
+    data4 = pd.read_csv('monyet.csv', sep=';', on_bad_lines='skip')
+    data5 = pd.read_csv('babi.csv', sep=';', on_bad_lines='skip')
     data6 = pd.read_csv('dataset_50_cabul_revisi.csv', sep=';', on_bad_lines='skip')
+    data7 = pd.read_csv('english_swears.csv', sep=';', on_bad_lines='skip')
+    data8 = pd.read_csv('feetBokepLabel.csv', sep=';', on_bad_lines='skip')
+    data9 = pd.read_csv('feetXlabel.csv', sep=';', on_bad_lines='skip')
 
-    data = pd.concat([data1, data2, data3, data4,data5,data6], ignore_index=True)
+    data = pd.concat([data1, data2, data3, data4, data5, data6, data7,data8,data9], ignore_index=True)
 except FileNotFoundError:
     raise Exception("The dataset file 'dataset_anjing.csv' was not found.")
 
