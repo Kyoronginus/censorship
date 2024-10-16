@@ -31,15 +31,9 @@ def read_csv_folder(folder_path):
     return pd.concat(dataframes, ignore_index=True)
 
 # Define the folder paths
-indo_folder = r'C:\Users\tohru\Documents\programming\censorship\indo'
 eng_folder = r'C:\Users\tohru\Documents\programming\censorship\eng'
-
-
-# Read the CSV files from both folders
-indo_data = read_csv_folder(indo_folder)
 eng_data = read_csv_folder(eng_folder)
-
-data = pd.concat([indo_data, eng_data], ignore_index=True)
+data = eng_data
 
 # Preprocessing function
 def preprocess(text):
@@ -69,8 +63,8 @@ y = mlb.fit_transform(data['label'])
 X_train, X_test, y_train, y_test = train_test_split(data['text'], y, test_size=0.2, random_state=69)
 
 # Load the saved model and tokenizer
-model = BertForSequenceClassification.from_pretrained('./saved_model')
-tokenizer = BertTokenizer.from_pretrained('./saved_model')
+model = BertForSequenceClassification.from_pretrained('./saved_model_roberta')
+tokenizer = BertTokenizer.from_pretrained('./saved_model_roberta')
 
 print("Model and tokenizer loaded from './saved_model'.")
 
@@ -168,45 +162,69 @@ def mask_kasar_cabul_chunks(sentence, chunk_size=3, overlap=1):
 
     return original_sentence
 
-# Updated predict_and_censor function using chunk-based censorship
+def omit_sensor_symbols(sentence):
+    """
+    Remove sensor symbols ('*****' and '#####') from the sentence.
+    """
+    sentence = sentence.replace('*****', '').replace('#####', '')
+    return sentence
+
+def restore_sensor_symbols(sentence, first_pass_sentence):
+    """
+    Restore sensor symbols ('*****' and '#####') from the first pass into the final censored sentence.
+    Ensure the number of chunks remains consistent between both passes.
+    """
+    restored_sentence = ''
+    
+    # Split sentences into words instead of chunks to maintain consistency
+    first_pass_words = first_pass_sentence.split()
+    second_pass_words = sentence.split()
+
+    # Iterate over both word lists and restore symbols where necessary
+    for i in range(len(first_pass_words)):
+        if i < len(second_pass_words):  # Ensure index does not go out of range
+            if '*****' in first_pass_words[i] or '#####' in first_pass_words[i]:
+                restored_sentence += first_pass_words[i] + ' '
+            else:
+                restored_sentence += second_pass_words[i] + ' '
+        else:
+            # If second_pass_words is shorter, just use the first_pass_words content
+            restored_sentence += first_pass_words[i] + ' '
+
+    return restored_sentence.strip()
+
 def predict_and_censor(sentence):
+    """
+    Perform censoring twice to ensure no 'kasar' or 'cabul' words are missed.
+    """
     try:
-        censored_sentence = mask_kasar_cabul_chunks(sentence, chunk_size=3, overlap=1)
-        return censored_sentence
+        # First round of censoring
+        first_censor_pass = mask_kasar_cabul_chunks(sentence, chunk_size=3, overlap=1)
+        
+        print("First censor : "  + (first_censor_pass))
+        # Omit symbols (***** and #####) from the first censored sentence before the second pass
+        sentence_without_symbols = omit_sensor_symbols(first_censor_pass)
+        
+        # Second round of censoring based on the result of the first pass (without symbols)
+        second_censor_pass = mask_kasar_cabul_chunks(sentence_without_symbols, chunk_size=2,overlap = 1)
+        
+        # Restore the censor symbols from the first pass back to the final sentence
+        fully_censored_sentence = restore_sensor_symbols(second_censor_pass, first_censor_pass)
+        
+        return second_censor_pass
     except Exception as e:
         print(f"Error during prediction and censoring: {e}")
         return "An error occurred. Please try again."
 
-# Interactive input for continuous prediction with censoring
+# Interactive input for continuous prediction with double censoring
 while True:
     try:
         sentence = input("Masukkan kalimat (ketik 'exit' untuk keluar): ")
         if sentence.lower() == 'exit':
             break
-        print(predict_and_censor(sentence))
+        print("Second censor : "  + predict_and_censor(sentence))
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-
-
-# Function for predicting a sentence and censoring the kasar parts
-def predict_and_censor(sentence):
-    try:
-        censored_sentence = mask_kasar_words(sentence)
-        return censored_sentence
-    except Exception as e:
-        print(f"Error during prediction and censoring: {e}")
-        return "An error occurred. Please try again."
-
-# Interactive input for continuous prediction with censoring
-while True:
-    try:
-        sentence = input("Masukkan kalimat (ketik 'exit' untuk keluar): ")
-        if sentence.lower() == 'exit':
-            break
-        print(predict_and_censor(sentence))
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-
 
 
 # # Interactive input for continuous prediction
