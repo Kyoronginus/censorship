@@ -1,30 +1,20 @@
-import torch
+import pandas as pd
 import numpy as np
 from sklearn.metrics import accuracy_score
-from transformers import RobertaTokenizer, RobertaForSequenceClassification
-from sklearn.model_selection import train_test_split
-import pandas as pd
 import re
-from sklearn.preprocessing import MultiLabelBinarizer
 import glob
 import os
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MultiLabelBinarizer
+from transformers import BertTokenizer, BertForSequenceClassification
+from transformers import Trainer, TrainingArguments
 import torch
-
-# Cek apakah GPU tersedia
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
-
-
+from torch.nn import BCEWithLogitsLoss
 
 # Function to read all CSV files from a given folder
 def read_csv_folder(folder_path):
-    # Use glob to get all CSV files in the folder
     csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
-    
-    # List to store DataFrames
     dataframes = []
-    
-    # Iterate through the CSV files and read them
     for file in csv_files:
         try:
             df = pd.read_csv(file, sep=';', on_bad_lines='skip')
@@ -32,63 +22,59 @@ def read_csv_folder(folder_path):
             print(f"Loaded: {file}")
         except Exception as e:
             print(f"Error loading {file}: {e}")
-    
-    # Concatenate all DataFrames
     return pd.concat(dataframes, ignore_index=True)
 
 # Define the folder paths
-indo_folder = r'C:\Users\tohru\Documents\programming\censorship\indo'
 eng_folder = r'C:\Users\tohru\Documents\programming\censorship\eng'
 
-
 # Read the CSV files from both folders
-indo_data = read_csv_folder(indo_folder)
 eng_data = read_csv_folder(eng_folder)
 
-data = pd.concat([indo_data, eng_data], ignore_index=True)
-
+# Use only English data
+data = eng_data
 
 # Preprocessing function
 def preprocess(text):
     if isinstance(text, str):
-        text = text.lower()
-        text = re.sub(r'[^\w\s]', '', text)
+        text = text.lower()  # Convert to lowercase
+        text = re.sub(r'[^\w\s]', '', text)  # Remove punctuationF
         return text
-    return ''
+    else:
+        return ''
 
-# Apply preprocessing
+# Apply preprocessing to text column
 data['text'] = data['text'].apply(preprocess)
 
-# Convert labels
+# Convert labels into lists of integers for multi-label classification
 def process_labels(label_str):
     if isinstance(label_str, str):
         labels = list(map(int, label_str.split(',')))
         return labels
-    return []
+    else:
+        return []
 
 data['label'] = data['label'].apply(process_labels)
 
-# MultiLabelBinarizer for one-hot encoding
+# Using MultiLabelBinarizer for one-hot encoding
 mlb = MultiLabelBinarizer()
 y = mlb.fit_transform(data['label'])
 
 # Split data into training and test sets
 X_train, X_test, y_train, y_test = train_test_split(data['text'], y, test_size=0.2, random_state=69)
 
-# Load the pre-trained RoBERTa model and tokenizer
-model = RobertaForSequenceClassification.from_pretrained('roberta-base', num_labels=3)
-tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
+# Initialize the Tokenizer and Model (Inisialisasi sebelum tokenisasi)
+tokenizer = BertTokenizer.from_pretrained("unitary/toxic-bert")
+model = BertForSequenceClassification.from_pretrained(
+    "unitary/toxic-bert", 
+    num_labels=len(mlb.classes_),  # Adjust label count based on dataset
+    ignore_mismatched_sizes=True   # Ignore size mismatch
+)
 
-# Pindahkan model ke GPU
-model.to(device)
-
-print("Model and tokenizer loaded from 'roberta-base'.")
-
-# Tokenize input
+# Tokenize the input
 train_encodings = tokenizer(list(X_train), truncation=True, padding=True, max_length=128)
 test_encodings = tokenizer(list(X_test), truncation=True, padding=True, max_length=128)
 
-# Create CustomDataset for training and test data
+# Convert to PyTorch Dataset
 class CustomDataset(torch.utils.data.Dataset):
     def __init__(self, encodings, labels):
         self.encodings = encodings
@@ -96,7 +82,7 @@ class CustomDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
-        item['labels'] = torch.tensor(self.labels[idx], dtype=torch.float)
+        item['labels'] = torch.tensor(self.labels[idx], dtype=torch.float)  # Ensure float for multi-label
         return item
 
     def __len__(self):
@@ -105,26 +91,56 @@ class CustomDataset(torch.utils.data.Dataset):
 train_dataset = CustomDataset(train_encodings, y_train)
 test_dataset = CustomDataset(test_encodings, y_test)
 
-# Training loop
-def train(model, train_dataset, epochs=3, batch_size=8):
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
+# Training arguments
+training_args = TrainingArguments(
+    output_dir='./results',
+    num_train_epochs=3,
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=8,
+    warmup_steps=500,
+    weight_decay=0.01,
+    logging_dir='./logs',
+    evaluation_strategy="epoch",  # Optional: evaluate every epoch
+    no_cuda=False
+)
 
-    model.train()
-    for epoch in range(epochs):
-        for batch in train_loader:
-            optimizer.zero_grad()
-            # Pindahkan batch ke GPU
-            batch = {key: val.to(device) for key, val in batch.items()}
-            outputs = model(**batch)
-            loss = torch.nn.BCEWithLogitsLoss()(outputs.logits, batch['labels'])
-            loss.backward()
-            optimizer.step()
-
-        print(f"Epoch {epoch+1}/{epochs} completed.")
+# Initialize Trainer
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=test_dataset,
+)
 
 # Train the model
-train(model, train_dataset)
+trainer.train()
+
+# Evaluate the model
+trainer.evaluate()
+
+# Save the trained model and tokenizer
+model.save_pretrained('./saved_model_roberta')
+tokenizer.save_pretrained('./saved_model_roberta')
+print("Model and tokenizer saved to './saved_model_roberta'.")
+
+# Predict function for a new sentence
+def predict_sentence(sentence):
+    inputs = tokenizer(sentence, return_tensors='pt', truncation=True, padding=True, max_length=128)
+    inputs = {key: val.to(model.device) for key, val in inputs.items()}
+    outputs = model(**inputs)
+    predictions = torch.sigmoid(outputs.logits).detach().cpu().numpy()
+    
+    # Display all labels with probabilities
+    label_texts = []
+    for i, value in enumerate(predictions[0]):
+        percentage = value * 100  # Convert to percentage
+        if mlb.classes_[i] == 0:
+            label_texts.append(f'Suitable: {percentage:.2f}%')
+        elif mlb.classes_[i] == 1:
+            label_texts.append(f'Kasar: {percentage:.2f}%')
+        elif mlb.classes_[i] == 2:
+            label_texts.append(f'Cabul: {percentage:.2f}%')
+    return ', '.join(label_texts)
 
 # Predict on the test set
 def predict_on_test_set(test_dataset):
@@ -132,41 +148,23 @@ def predict_on_test_set(test_dataset):
     predictions = []
     
     for batch in torch.utils.data.DataLoader(test_dataset, batch_size=8):
-        # Pindahkan batch ke GPU
-        batch = {key: val.to(device) for key, val in batch.items()}
         with torch.no_grad():
-            outputs = model(**batch)
-            preds = torch.sigmoid(outputs.logits).detach().cpu().numpy()
+            outputs = model(**{key: val.to(model.device) for key, val in batch.items()})
+            preds = torch.sigmoid(outputs.logits).detach().cpu().numpy()  # Convert to numpy array
             predictions.extend(preds)
     
     return np.array(predictions)
 
-# Get predictions and calculate accuracy
+# Get predictions for the test set
 predictions = predict_on_test_set(test_dataset)
+
+# Apply threshold to get binary predictions
 threshold = 0.5
 binary_predictions = (predictions > threshold).astype(int)
+
+# Calculate accuracy
 accuracy = accuracy_score(y_test, binary_predictions)
-
 print(f"Accuracy on the test set: {accuracy * 100:.2f}%")
-
-# Predict function for a new sentence
-def predict_sentence(sentence):
-    inputs = tokenizer(sentence, return_tensors='pt', truncation=True, padding=True, max_length=128)
-    inputs = {key: val.to(device) for key, val in inputs.items()}  # Pindahkan inputs ke GPU
-    outputs = model(**inputs)
-    predictions = torch.sigmoid(outputs.logits).detach().cpu().numpy()
-    
-    label_texts = []
-    for i, value in enumerate(predictions[0]):
-        percentage = value * 100
-        if mlb.classes_[i] == 0:
-            label_texts.append(f'Suitable: {percentage:.2f}%')
-        elif mlb.classes_[i] == 1:
-            label_texts.append(f'Kasar: {percentage:.2f}%')
-        elif mlb.classes_[i] == 2:
-            label_texts.append(f'Cabul: {percentage:.2f}%')
-
-    return ', '.join(label_texts)
 
 # Interactive input for continuous prediction
 while True:
