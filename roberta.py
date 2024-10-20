@@ -25,7 +25,7 @@ def read_csv_folder(folder_path):
     return pd.concat(dataframes, ignore_index=True)
 
 # Define the folder paths
-eng_folder = r'C:\Users\tohru\Documents\programming\censorship\eng'
+eng_folder = r'eng'
 
 # Read the CSV files from both folders
 eng_data = read_csv_folder(eng_folder)
