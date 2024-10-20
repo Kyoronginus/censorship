@@ -31,7 +31,7 @@ def read_csv_folder(folder_path):
     return pd.concat(dataframes, ignore_index=True)
 
 # Define the folder paths
-eng_folder = r'C:\Users\tohru\Documents\programming\censorship\eng'
+eng_folder = r'eng'
 eng_data = read_csv_folder(eng_folder)
 data = eng_data
 
@@ -154,7 +154,7 @@ def mask_kasar_cabul_chunks(sentence, chunk_size=3, overlap=1):
         cabul_prob = predictions[0][mlb.classes_.tolist().index(2)]  # Index 2 corresponds to 'cabul'
 
         # Use threshold to classify chunks as 'kasar' or 'cabul'
-        threshold = 0.3
+        threshold = 0.5
         if kasar_prob > threshold:
             original_sentence = original_sentence.replace(chunk, '*****')
         elif cabul_prob > threshold:
