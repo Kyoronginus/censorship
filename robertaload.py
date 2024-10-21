@@ -135,11 +135,15 @@ def chunk_text(text, chunk_size=3, overlap=1):
     chunks = [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size - overlap)]
     return chunks
 
+#List to store censored chunks
+censored_chunks = []
+
 def mask_kasar_cabul_chunks(sentence, chunk_size=3, overlap=1):
     """
     Process a sentence by breaking it into chunks and masking chunks classified as 'kasar' or 'cabul'.
     """
     original_sentence = sentence
+
     sentence = re.sub(r'[^\w\s]', '', sentence.lower())  # Remove punctuation and lowercase
     chunks = chunk_text(sentence, chunk_size, overlap)  # Split sentence into chunks
 
@@ -156,8 +160,10 @@ def mask_kasar_cabul_chunks(sentence, chunk_size=3, overlap=1):
         # Use threshold to classify chunks as 'kasar' or 'cabul'
         threshold = 0.5
         if kasar_prob > threshold:
+            censored_chunks.append(chunk)
             original_sentence = original_sentence.replace(chunk, '*****')
         elif cabul_prob > threshold:
+            censored_chunks.append(chunk)
             original_sentence = original_sentence.replace(chunk, '#####')
 
     return original_sentence
@@ -222,7 +228,15 @@ while True:
         sentence = input("Masukkan kalimat (ketik 'exit' untuk keluar): ")
         if sentence.lower() == 'exit':
             break
+        
         print("Second censor : "  + predict_and_censor(sentence))
+
+        print("Detection result: " + predict_sentence(sentence))
+
+        print("Censored words:")
+        print(*censored_chunks)
+
+        censored_chunks.clear()
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
 
