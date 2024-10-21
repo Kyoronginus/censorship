@@ -137,9 +137,9 @@ def predict_sentence(sentence):
         if mlb.classes_[i] == 0:
             label_texts.append(f'Suitable: {percentage:.2f}%')
         elif mlb.classes_[i] == 1:
-            label_texts.append(f'Kasar: {percentage:.2f}%')
+            label_texts.append(f'Inappropriate: {percentage:.2f}%')
         elif mlb.classes_[i] == 2:
-            label_texts.append(f'Cabul: {percentage:.2f}%')
+            label_texts.append(f'Sexual-toned: {percentage:.2f}%')
     return ', '.join(label_texts)
 
 # Predict on the test set
