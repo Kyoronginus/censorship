@@ -9,6 +9,7 @@ import re
 from sklearn.preprocessing import MultiLabelBinarizer
 import glob
 import os
+from utils.evaluation_utils import plot_heatmap, print_classification_report
 
 # Function to read all CSV files from a given folder
 def read_csv_folder(folder_path):
@@ -111,8 +112,13 @@ predictions = predict_on_test_set(test_dataset)
 threshold = 0.5
 binary_predictions = (predictions > threshold).astype(int)
 accuracy = accuracy_score(y_test, binary_predictions)
-
 print(f"Accuracy on the test set: {accuracy * 100:.2f}%")
+
+# Tampilkan Heatmap
+plot_heatmap(y_test, binary_predictions, mlb.classes_)
+
+# Tampilkan Classification Report
+print_classification_report(y_test, binary_predictions, mlb.classes_)
 
 # Predict function for a new sentence
 def predict_sentence(sentence):

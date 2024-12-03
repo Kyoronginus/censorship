@@ -2,3 +2,6 @@ logs/
 results/
 /saved_model/
 /saved_model_roberta/
+/saved_model_roberta_base/
+/__pycache__/
+/templates/

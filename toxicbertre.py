@@ -33,7 +33,7 @@ y = mlb.fit_transform(data['label'])
 X_train, X_test, y_train, y_test = train_test_split(data['text'], y, test_size=0.2, random_state=69)
 
 # Initialize the Tokenizer and Model (Inisialisasi sebelum tokenisasi)
-model_name = "indobenchmark/indobert-base-p2"  # Change to "bert-base-uncased" or "roberta-base" as needed
+model_name = "unitary/toxic-bert"  # Change to "bert-base-uncased" or "roberta-base" as needed
 tokenizer = BertTokenizer.from_pretrained(model_name)
 model = BertForSequenceClassification.from_pretrained(
     model_name, 

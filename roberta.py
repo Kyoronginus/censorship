@@ -10,6 +10,7 @@ from transformers import BertTokenizer, BertForSequenceClassification
 from transformers import Trainer, TrainingArguments
 import torch
 from torch.nn import BCEWithLogitsLoss
+from transformers import RobertaTokenizer, RobertaForSequenceClassification
 
 # Function to read all CSV files from a given folder
 def read_csv_folder(folder_path):
@@ -63,11 +64,13 @@ y = mlb.fit_transform(data['label'])
 X_train, X_test, y_train, y_test = train_test_split(data['text'], y, test_size=0.2, random_state=69)
 
 # Initialize the Tokenizer and Model (Inisialisasi sebelum tokenisasi)
-tokenizer = BertTokenizer.from_pretrained("unitary/toxic-bert")
-model = BertForSequenceClassification.from_pretrained(
-    "unitary/toxic-bert", 
-    num_labels=len(mlb.classes_),  # Adjust label count based on dataset
-    ignore_mismatched_sizes=True   # Ignore size mismatch
+tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
+
+# Load RoBERTa model for multi-label classification
+model = RobertaForSequenceClassification.from_pretrained(
+    "roberta-base",
+    num_labels=len(mlb.classes_),  # Adjust to the number of labels in your dataset
+    problem_type="multi_label_classification"  # Explicitly set multi-label classification
 )
 
 # Tokenize the input
@@ -119,9 +122,9 @@ trainer.train()
 trainer.evaluate()
 
 # Save the trained model and tokenizer
-model.save_pretrained('./saved_model_roberta')
-tokenizer.save_pretrained('./saved_model_roberta')
-print("Model and tokenizer saved to './saved_model_roberta'.")
+model.save_pretrained('./saved_model_roberta_base')
+tokenizer.save_pretrained('./saved_model_roberta_base')
+print("Model and tokenizer saved to './saved_model_roberta_base'.")
 
 # Predict function for a new sentence
 def predict_sentence(sentence):
